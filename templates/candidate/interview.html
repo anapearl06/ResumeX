@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interview Prep - ResumeX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="layout">
+    {% include 'candidate/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1 class="animate-in">Interview Prep</h1>
+            <p class="text-secondary animate-in delay-1">Practice with AI-generated questions</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="card animate-in delay-1" style="margin-bottom:var(--space-6);">
+          <div class="input-group">
+            <input
+              type="text"
+              id="role-input"
+              class="input"
+              placeholder="Enter target job role (e.g. Backend Engineer)"
+              style="flex:1;"
+            >
+            <button id="generate-btn" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Generate
+            </button>
+          </div>
+        </div>
+
+        <div id="loading" class="spinner" style="display:none;"></div>
+
+        <div id="error-state" class="empty" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p>No resume uploaded yet</p>
+          <a href="/candidate/upload" class="btn btn-primary" style="margin-top:var(--space-4);">Upload Resume</a>
+        </div>
+
+        <div id="content-area" style="display:none;">
+          <div id="category-tabs" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-6);overflow-x:auto;"></div>
+          <div id="questions-container"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    (function () {
+      var roleInput = document.getElementById('role-input');
+      var generateBtn = document.getElementById('generate-btn');
+      var loading = document.getElementById('loading');
+      var errorState = document.getElementById('error-state');
+      var contentArea = document.getElementById('content-area');
+      var tabsContainer = document.getElementById('category-tabs');
+      var questionsContainer = document.getElementById('questions-container');
+
+      var allQuestions = {};
+      var activeCategory = 'technical';
+
+      var categories = [
+        { id: 'technical', label: 'Technical' },
+        { id: 'resume', label: 'Resume-Based' },
+        { id: 'project', label: 'Project-Based' },
+        { id: 'hr', label: 'HR / Behavioral' }
+      ];
+
+      generateBtn.addEventListener('click', function () {
+        generate();
+      });
+
+      roleInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') generate();
+      });
+
+      function generate() {
+        var role = roleInput.value.trim();
+        if (!role) {
+          toast('Please enter a target job role', 'error');
+          return;
+        }
+        loadQuestions(role);
+      }
+
+      async function loadQuestions(role) {
+        loading.style.display = '';
+        errorState.style.display = 'none';
+        contentArea.style.display = 'none';
+
+        try {
+          var data = await apiFetch('/api/interview-prep?role=' + encodeURIComponent(role));
+          loading.style.display = 'none';
+
+          if (!data) {
+            errorState.style.display = '';
+            return;
+          }
+
+          categorize(data.questions || data);
+          contentArea.style.display = '';
+          renderTabs();
+          renderQuestions();
+        } catch (e) {
+          loading.style.display = 'none';
+          if (e.message && e.message.toLowerCase().includes('resume')) {
+            errorState.style.display = '';
+          } else {
+            toast('Failed to generate: ' + (e.message || 'Unknown error'), 'error');
+            errorState.style.display = '';
+          }
+        }
+      }
+
+      function categorize(questions) {
+        allQuestions = { technical: [], resume: [], project: [], hr: [] };
+
+        if (Array.isArray(questions)) {
+          questions.forEach(function (q) {
+            var cat = (q.category || q.type || 'hr').toLowerCase();
+            if (cat.includes('technical') || cat.includes('coding')) {
+              allQuestions.technical.push(q);
+            } else if (cat.includes('resume')) {
+              allQuestions.resume.push(q);
+            } else if (cat.includes('project')) {
+              allQuestions.project.push(q);
+            } else {
+              allQuestions.hr.push(q);
+            }
+          });
+        }
+
+        var firstNonEmpty = categories.find(function (c) {
+          return allQuestions[c.id] && allQuestions[c.id].length > 0;
+        });
+        if (firstNonEmpty) activeCategory = firstNonEmpty.id;
+      }
+
+      function renderTabs() {
+        var html = '';
+        categories.forEach(function (cat) {
+          var count = (allQuestions[cat.id] || []).length;
+          var isActive = cat.id === activeCategory;
+          html += '<button class="btn ' + (isActive ? 'btn-primary' : 'btn-ghost') + ' btn-sm" onclick="switchTab(\'' + cat.id + '\')" style="white-space:nowrap;">';
+          html += cat.label;
+          if (count > 0) {
+            html += ' <span style="opacity:0.7;margin-left:4px;">' + count + '</span>';
+          }
+          html += '</button>';
+        });
+        tabsContainer.innerHTML = html;
+      }
+
+      window.switchTab = function (catId) {
+        activeCategory = catId;
+        renderTabs();
+        renderQuestions();
+      };
+
+      function renderQuestions() {
+        var qs = allQuestions[activeCategory] || [];
+
+        if (!qs.length) {
+          questionsContainer.innerHTML = '<div class="empty"><p>No questions in this category</p></div>';
+          return;
+        }
+
+        var html = '';
+        qs.forEach(function (q, i) {
+          var questionText = q.question || q.text || q;
+          var answer = q.answer || q.sample_answer || q.model_answer || '';
+          var topic = q.topic || q.skill || '';
+          var difficulty = q.difficulty || q.level || '';
+          var tips = q.tips || q.hint || '';
+          var qId = 'q-' + activeCategory + '-' + i;
+
+          html += '<div class="card animate-in" style="margin-bottom:var(--space-3);">';
+          html += '<div style="padding:var(--space-4) var(--space-5);">';
+          html += '<div style="display:flex;align-items:flex-start;gap:var(--space-3);">';
+          html += '<span style="font-size:var(--text-xs);font-weight:700;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 8px;flex-shrink:0;">' + (i + 1) + '</span>';
+          html += '<div style="flex:1;min-width:0;">';
+          html += '<p style="font-size:var(--text-base);font-weight:500;color:var(--text);line-height:1.6;margin:0;">' + esc(questionText) + '</p>';
+          html += '<div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);flex-wrap:wrap;">';
+          if (topic) {
+            html += '<span class="badge badge-blue">' + esc(topic) + '</span>';
+          }
+          if (difficulty) {
+            var diffColor = difficulty.toLowerCase().includes('hard') || difficulty.toLowerCase().includes('advanced') ? 'red' :
+                            difficulty.toLowerCase().includes('medium') || difficulty.toLowerCase().includes('intermediate') ? 'amber' : 'green';
+            html += '<span class="badge badge-' + diffColor + '">' + esc(difficulty) + '</span>';
+          }
+          html += '</div>';
+
+          if (tips) {
+            html += '<div style="display:flex;align-items:flex-start;gap:var(--space-2);margin-top:var(--space-3);padding:var(--space-3);background:color-mix(in srgb,var(--blue) 6%,transparent);border-radius:var(--radius-sm);">';
+            html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+            html += '<span style="font-size:var(--text-sm);color:var(--text-secondary);line-height:1.5;">' + esc(typeof tips === 'string' ? tips : tips.text || '') + '</span>';
+            html += '</div>';
+          }
+
+          if (answer) {
+            html += '<button class="btn btn-ghost btn-sm" style="margin-top:var(--space-3);" onclick="toggleAnswer(\'' + qId + '\')">';
+            html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+            html += ' <span id="' + qId + '-label">Show Answer</span>';
+            html += '</button>';
+            html += '<div id="' + qId + '-answer" style="display:none;margin-top:var(--space-3);padding:var(--space-4);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);">';
+            html += '<p style="font-size:var(--text-sm);color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;margin:0;">' + esc(typeof answer === 'string' ? answer : answer.text || '') + '</p>';
+            html += '</div>';
+          }
+
+          html += '</div>';
+          html += '</div>';
+          html += '</div>';
+          html += '</div>';
+        });
+
+        questionsContainer.innerHTML = html;
+      }
+
+      window.toggleAnswer = function (qId) {
+        var answerEl = document.getElementById(qId + '-answer');
+        var labelEl = document.getElementById(qId + '-label');
+        if (!answerEl || !labelEl) return;
+
+        if (answerEl.style.display === 'none') {
+          answerEl.style.display = '';
+          labelEl.textContent = 'Hide Answer';
+        } else {
+          answerEl.style.display = 'none';
+          labelEl.textContent = 'Show Answer';
+        }
+      };
+    })();
+  </script>
+</body>
+</html>

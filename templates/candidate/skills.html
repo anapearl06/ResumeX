@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Gaps - ResumeX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="layout">
+    {% include 'candidate/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1 class="animate-in">Skill Gaps</h1>
+            <p class="text-secondary animate-in delay-1">Identify gaps for your target role</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="card animate-in delay-1" style="margin-bottom:var(--space-6);">
+          <div class="input-group">
+            <input
+              type="text"
+              id="role-input"
+              class="input"
+              placeholder="Enter target job role (e.g. Senior Frontend Developer)"
+              style="flex:1;"
+            >
+            <button id="analyze-btn" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Analyze
+            </button>
+          </div>
+        </div>
+
+        <div id="loading" class="spinner" style="display:none;"></div>
+
+        <div id="empty-state" class="empty" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <p>Enter a job role to analyze skill gaps</p>
+        </div>
+
+        <div id="results" style="display:none;">
+          <div class="grid grid-2">
+            <div class="card animate-in">
+              <div class="card-header">
+                <div class="card-title">Match Overview</div>
+              </div>
+              <div style="text-align:center;padding:var(--space-4) 0;">
+                <div class="match-ring" id="skills-ring" style="width:120px;height:120px;margin:0 auto var(--space-4);"></div>
+                <div id="match-score-label" style="font-size:var(--text-2xl);font-weight:700;color:var(--text);"></div>
+                <div style="font-size:var(--text-sm);color:var(--text-secondary);">Overall Match</div>
+              </div>
+              <div id="recommendations-section" style="margin-top:var(--space-4);"></div>
+            </div>
+
+            <div class="card animate-in delay-1">
+              <div class="card-header">
+                <div class="card-title">Skills Breakdown</div>
+              </div>
+
+              <div id="skills-have-section" style="margin-bottom:var(--space-5);">
+                <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span style="font-size:var(--text-sm);font-weight:600;color:var(--green);">Skills You Have</span>
+                </div>
+                <div id="skills-have-list"></div>
+              </div>
+
+              <div id="skills-need-section">
+                <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span style="font-size:var(--text-sm);font-weight:600;color:var(--red);">Skills You Need</span>
+                </div>
+                <div id="skills-need-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    (function () {
+      var roleInput = document.getElementById('role-input');
+      var analyzeBtn = document.getElementById('analyze-btn');
+      var loading = document.getElementById('loading');
+      var emptyState = document.getElementById('empty-state');
+      var results = document.getElementById('results');
+
+      analyzeBtn.addEventListener('click', function () {
+        analyze();
+      });
+
+      roleInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') analyze();
+      });
+
+      function analyze() {
+        var role = roleInput.value.trim();
+        if (!role) {
+          toast('Please enter a target job role', 'error');
+          return;
+        }
+        runAnalysis(role);
+      }
+
+      async function runAnalysis(role) {
+        loading.style.display = '';
+        emptyState.style.display = 'none';
+        results.style.display = 'none';
+
+        try {
+          var data = await apiFetch('/api/skill-gap?role=' + encodeURIComponent(role));
+          loading.style.display = 'none';
+
+          if (!data) {
+            emptyState.style.display = '';
+            return;
+          }
+
+          results.style.display = '';
+          renderOverview(data);
+          renderSkillsHave(data.matching_skills || data.matched_skills || data.skills_have || []);
+          renderSkillsNeed(data.missing_skills || data.skills_need || []);
+          renderRecommendations(data.recommendations || []);
+        } catch (e) {
+          loading.style.display = 'none';
+          toast('Failed to analyze: ' + (e.message || 'Unknown error'), 'error');
+          emptyState.style.display = '';
+        }
+      }
+
+      function renderOverview(data) {
+        var score = data.match_score || data.score || 0;
+        var color = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : 'var(--red)';
+        matchRing('skills-ring', score, color);
+        document.getElementById('match-score-label').textContent = score + '%';
+      }
+
+      function renderRecommendations(recs) {
+        var el = document.getElementById('recommendations-section');
+        if (!recs.length) {
+          el.innerHTML = '';
+          return;
+        }
+        var html = '<div style="font-size:var(--text-sm);font-weight:600;color:var(--text);margin-bottom:var(--space-3);">Recommendations</div>';
+        recs.forEach(function (rec) {
+          var text = typeof rec === 'string' ? rec : rec.text || rec;
+          html += '<div style="display:flex;align-items:flex-start;gap:var(--space-2);margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);background:color-mix(in srgb,var(--primary) 5%,transparent);border-radius:var(--radius-sm);">';
+          html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+          html += '<span style="font-size:var(--text-sm);color:var(--text-secondary);line-height:1.5;">' + esc(text) + '</span>';
+          html += '</div>';
+        });
+        el.innerHTML = html;
+      }
+
+      function renderSkillsHave(skills) {
+        var el = document.getElementById('skills-have-list');
+        if (!skills.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No matching skills found</p>';
+          return;
+        }
+        var html = '';
+        skills.forEach(function (s) {
+          var name = typeof s === 'string' ? s : s.name || s;
+          var level = typeof s === 'object' ? (s.level || s.proficiency || '') : '';
+          html += '<div class="list-item" style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) 0;border-bottom:1px solid var(--border);">';
+          html += '<div style="display:flex;align-items:center;gap:var(--space-2);">';
+          html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+          html += '<span style="font-size:var(--text-sm);color:var(--text);font-weight:500;">' + esc(name) + '</span>';
+          html += '</div>';
+          if (level) {
+            html += '<span class="badge badge-green">' + esc(level) + '</span>';
+          }
+          html += '</div>';
+        });
+        el.innerHTML = html;
+      }
+
+      function renderSkillsNeed(skills) {
+        var el = document.getElementById('skills-need-list');
+        if (!skills.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No missing skills - you are fully matched!</p>';
+          return;
+        }
+        var html = '';
+        skills.forEach(function (s) {
+          var name = typeof s === 'string' ? s : s.name || s;
+          var importance = typeof s === 'object' ? (s.importance || s.priority || '') : '';
+          html += '<div class="list-item" style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) 0;border-bottom:1px solid var(--border);">';
+          html += '<div style="display:flex;align-items:center;gap:var(--space-2);">';
+          html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+          html += '<span style="font-size:var(--text-sm);color:var(--text);font-weight:500;">' + esc(name) + '</span>';
+          html += '</div>';
+          if (importance) {
+            html += '<span class="badge badge-amber">' + esc(importance) + '</span>';
+          }
+          html += '</div>';
+        });
+        el.innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

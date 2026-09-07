@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Create Job &middot; Resumex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+  <div class="layout">
+    {% include 'hr/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1>Create Job</h1>
+            <p style="color:var(--text-muted);font-size:var(--text-sm);margin-top:4px">Fill in the details to create a new job opening</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card animate-in" style="max-width:720px;margin-top:24px">
+        <div class="input-group">
+          <label>Job Title <span style="color:var(--red)">*</span></label>
+          <input class="input" id="f_title" placeholder="e.g. Frontend Developer"/>
+        </div>
+        <div class="input-group">
+          <label>Company Name <span style="color:var(--red)">*</span></label>
+          <input class="input" id="f_company" placeholder="e.g. Google"/>
+        </div>
+        <div class="input-group">
+          <label>Job Description</label>
+          <textarea class="input" id="f_desc" rows="5" placeholder="Describe the role, responsibilities, requirements, and what makes this position unique..."></textarea>
+        </div>
+        <div class="input-group">
+          <label>Required Skills <span style="color:var(--text-muted);font-weight:400">(comma separated)</span></label>
+          <input class="input" id="f_req" placeholder="React, JavaScript, CSS"/>
+        </div>
+        <div class="input-group">
+          <label>Preferred Skills <span style="color:var(--text-muted);font-weight:400">(comma separated)</span></label>
+          <input class="input" id="f_pref" placeholder="TypeScript, Next.js, GraphQL"/>
+        </div>
+        <div class="grid grid-2">
+          <div class="input-group">
+            <label>Required Experience (years)</label>
+            <input class="input" type="number" id="f_exp" placeholder="2" min="0" max="50"/>
+          </div>
+          <div class="input-group">
+            <label>Education Requirement</label>
+            <input class="input" id="f_edu" placeholder="B.Tech / B.E."/>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-lg" id="saveBtn" style="width:100%;margin-top:8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create Job
+        </button>
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/main.js"></script>
+  <script>
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      const title = document.getElementById('f_title').value.trim();
+      const company = document.getElementById('f_company').value.trim();
+      const description = document.getElementById('f_desc').value.trim();
+      const required_skills = document.getElementById('f_req').value.split(',').map(s => s.trim()).filter(Boolean);
+      const preferred_skills = document.getElementById('f_pref').value.split(',').map(s => s.trim()).filter(Boolean);
+      const experience_required = parseInt(document.getElementById('f_exp').value) || 0;
+      const education = document.getElementById('f_edu').value.trim();
+
+      if (!title) { toast('Job title is required', 'error'); return; }
+      if (!company) { toast('Company name is required', 'error'); return; }
+
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner" style="width:16px;height:16px;border-width:2px"></span> Creating...';
+
+      try {
+        await apiFetch('/api/hr/job', {
+          method: 'POST',
+          body: JSON.stringify({ title, company, description, required_skills, preferred_skills, experience_required, education })
+        });
+        toast('Job created successfully', 'success');
+        setTimeout(() => { window.location.href = '/hr/jobs'; }, 800);
+      } catch (e) {
+        toast(e.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create Job';
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        if (e.target.id !== 'f_desc') {
+          e.preventDefault();
+          document.getElementById('saveBtn').click();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

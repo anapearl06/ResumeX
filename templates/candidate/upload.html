@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Analysis - ResumeX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="layout">
+    {% include 'candidate/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1 class="animate-in">Resume Analysis</h1>
+            <p class="text-secondary animate-in delay-1">Upload your resume for AI-powered insights</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div id="upload-section" class="animate-in delay-1" style="max-width:600px;margin:0 auto;">
+          <div class="card">
+            <div
+              id="drop-zone"
+              class="upload-zone"
+              style="border:2px dashed var(--border);border-radius:var(--radius-lg);padding:var(--space-10) var(--space-6);text-align:center;cursor:pointer;transition:all .2s;"
+            >
+              <div class="upload-icon" style="margin-bottom:var(--space-4);">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <p style="font-size:var(--text-lg);font-weight:600;color:var(--text);margin-bottom:var(--space-2);">Drop your resume here</p>
+              <p style="font-size:var(--text-sm);color:var(--text-secondary);">or click to browse &middot; PDF or DOCX &middot; Max 10MB</p>
+              <input type="file" id="file-input" accept=".pdf,.docx" style="display:none;">
+            </div>
+
+            <div id="file-bar" style="display:none;margin-top:var(--space-4);display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) var(--space-4);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span id="file-name" style="flex:1;font-size:var(--text-sm);font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+              <span id="file-size" style="font-size:var(--text-xs);color:var(--text-muted);"></span>
+              <button id="remove-file" class="btn btn-ghost btn-sm" style="padding:4px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <button id="analyze-btn" class="btn btn-primary" style="width:100%;margin-top:var(--space-4);display:none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Analyze
+            </button>
+          </div>
+        </div>
+
+        <div id="loading-section" style="display:none;max-width:600px;margin:var(--space-10) auto;text-align:center;">
+          <div class="spinner" style="margin:0 auto var(--space-4);"></div>
+          <p style="font-size:var(--text-base);color:var(--text-secondary);">Analyzing your resume...</p>
+          <p style="font-size:var(--text-sm);color:var(--text-muted);margin-top:var(--space-2);">This may take a few moments</p>
+        </div>
+
+        <div id="results-section" style="display:none;">
+          <div class="grid grid-2">
+            <div class="card animate-in" id="profile-card">
+              <div class="card-header">
+                <div class="card-title">Profile</div>
+              </div>
+              <div id="profile-content"></div>
+            </div>
+            <div class="card animate-in delay-1" id="skills-card">
+              <div class="card-header">
+                <div class="card-title">Skills</div>
+              </div>
+              <div id="skills-content"></div>
+            </div>
+          </div>
+          <div class="grid grid-2" style="margin-top:var(--space-4);">
+            <div class="card animate-in delay-2" id="experience-card">
+              <div class="card-header">
+                <div class="card-title">Experience</div>
+              </div>
+              <div id="experience-content"></div>
+            </div>
+            <div class="card animate-in delay-3">
+              <div class="card-header">
+                <div class="card-title">Projects</div>
+              </div>
+              <div id="projects-content"></div>
+            </div>
+          </div>
+          <div class="card animate-in delay-4" style="margin-top:var(--space-4);max-width:calc(50% - var(--space-2));">
+            <div class="card-header">
+              <div class="card-title">Certifications</div>
+            </div>
+            <div id="certs-content"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    (function () {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('file-input');
+      const fileBar = document.getElementById('file-bar');
+      const fileName = document.getElementById('file-name');
+      const fileSize = document.getElementById('file-size');
+      const removeFileBtn = document.getElementById('remove-file');
+      const analyzeBtn = document.getElementById('analyze-btn');
+      const uploadSection = document.getElementById('upload-section');
+      const loadingSection = document.getElementById('loading-section');
+      const resultsSection = document.getElementById('results-section');
+
+      let selectedFile = null;
+
+      fileBar.style.display = 'none';
+
+      dropZone.addEventListener('click', function () {
+        fileInput.click();
+      });
+
+      dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--primary)';
+        dropZone.style.background = 'color-mix(in srgb, var(--primary) 5%, transparent)';
+      });
+
+      dropZone.addEventListener('dragleave', function () {
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'transparent';
+      });
+
+      dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'transparent';
+        var files = e.dataTransfer.files;
+        if (files.length) handleFile(files[0]);
+      });
+
+      fileInput.addEventListener('change', function () {
+        if (fileInput.files.length) handleFile(fileInput.files[0]);
+      });
+
+      removeFileBtn.addEventListener('click', function () {
+        selectedFile = null;
+        fileBar.style.display = 'none';
+        analyzeBtn.style.display = 'none';
+        fileInput.value = '';
+      });
+
+      analyzeBtn.addEventListener('click', function () {
+        if (!selectedFile) return;
+        uploadFile(selectedFile);
+      });
+
+      function handleFile(file) {
+        var allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowed.includes(file.type)) {
+          toast('Please upload a PDF or DOCX file', 'error');
+          return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast('File size must be under 10MB', 'error');
+          return;
+        }
+        selectedFile = file;
+        fileName.textContent = file.name;
+        fileSize.textContent = formatSize(file.size);
+        fileBar.style.display = 'flex';
+        analyzeBtn.style.display = 'flex';
+      }
+
+      function formatSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      }
+
+      async function uploadFile(file) {
+        uploadSection.style.display = 'none';
+        loadingSection.style.display = '';
+
+        var formData = new FormData();
+        formData.append('resume', file);
+
+        try {
+          var resp = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          var data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Upload failed');
+
+          toast('Resume uploaded successfully', 'success');
+          loadResults();
+        } catch (e) {
+          toast(e.message || 'Upload failed', 'error');
+          uploadSection.style.display = '';
+          loadingSection.style.display = 'none';
+        }
+      }
+
+      async function loadResults() {
+        try {
+          var data = await apiFetch('/api/resume');
+          loadingSection.style.display = 'none';
+          resultsSection.style.display = '';
+
+          if (!data) {
+            toast('No resume data found', 'error');
+            uploadSection.style.display = '';
+            return;
+          }
+
+          renderProfile(data);
+          renderSkills(data.skills || []);
+          renderExperience(data.experience || []);
+          renderProjects(data.projects || []);
+          renderCerts(data.certifications || []);
+        } catch (e) {
+          toast('Failed to load analysis', 'error');
+          uploadSection.style.display = '';
+          loadingSection.style.display = 'none';
+        }
+      }
+
+      function renderProfile(data) {
+        var el = document.getElementById('profile-content');
+        var initials = ((data.name || 'U')[0] || 'U').toUpperCase();
+        var html = '<div style="display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-4);">';
+        html += '<div style="width:56px;height:56px;border-radius:50%;background:color-mix(in srgb,var(--primary) 15%,transparent);display:flex;align-items:center;justify-content:center;font-size:var(--text-xl);font-weight:700;color:var(--primary);flex-shrink:0;">' + esc(initials) + '</div>';
+        html += '<div>';
+        html += '<div style="font-size:var(--text-lg);font-weight:600;color:var(--text);">' + esc(data.name || 'Not found') + '</div>';
+        html += '<div style="font-size:var(--text-sm);color:var(--text-secondary);">' + esc(data.email || '') + '</div>';
+        if (data.phone) html += '<div style="font-size:var(--text-sm);color:var(--text-secondary);">' + esc(data.phone) + '</div>';
+        html += '</div>';
+        html += '</div>';
+        if (data.summary) {
+          html += '<p style="font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;">' + esc(data.summary) + '</p>';
+        }
+        el.innerHTML = html;
+      }
+
+      function renderSkills(skills) {
+        var el = document.getElementById('skills-content');
+        if (!skills.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No skills found</p>';
+          return;
+        }
+        var html = '<div class="tags">';
+        skills.forEach(function (s) {
+          var name = typeof s === 'string' ? s : s.name || s;
+          html += '<span class="tag">' + esc(name) + '</span>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+      }
+
+      function renderExperience(experience) {
+        var el = document.getElementById('experience-content');
+        if (!experience.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No experience found</p>';
+          return;
+        }
+        var html = '<div class="timeline">';
+        experience.forEach(function (exp) {
+          html += '<div class="timeline-item">';
+          html += '<div style="font-weight:600;font-size:var(--text-base);color:var(--text);">' + esc(exp.title || exp.role || '') + '</div>';
+          html += '<div style="font-size:var(--text-sm);color:var(--primary);">' + esc(exp.company || '') + '</div>';
+          if (exp.duration || exp.period) {
+            html += '<div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px;">' + esc(exp.duration || exp.period || '') + '</div>';
+          }
+          if (exp.description) {
+            html += '<p style="font-size:var(--text-sm);color:var(--text-secondary);margin-top:var(--space-2);line-height:1.5;">' + esc(exp.description) + '</p>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+      }
+
+      function renderProjects(projects) {
+        var el = document.getElementById('projects-content');
+        if (!projects.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No projects found</p>';
+          return;
+        }
+        var html = '<div class="list">';
+        projects.forEach(function (p) {
+          html += '<div class="list-item" style="padding:var(--space-3) 0;border-bottom:1px solid var(--border);">';
+          html += '<div style="font-weight:600;font-size:var(--text-base);color:var(--text);">' + esc(p.name || p.title || '') + '</div>';
+          if (p.description) {
+            html += '<p style="font-size:var(--text-sm);color:var(--text-secondary);margin-top:2px;line-height:1.5;">' + esc(p.description) + '</p>';
+          }
+          if (p.tech || p.technologies) {
+            var techs = p.tech || p.technologies;
+            if (Array.isArray(techs)) {
+              html += '<div class="tags" style="margin-top:var(--space-2);">';
+              techs.forEach(function (t) {
+                html += '<span class="tag">' + esc(t) + '</span>';
+              });
+              html += '</div>';
+            }
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+      }
+
+      function renderCerts(certs) {
+        var el = document.getElementById('certs-content');
+        if (!certs.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No certifications found</p>';
+          return;
+        }
+        var html = '<div class="list">';
+        certs.forEach(function (c) {
+          html += '<div class="list-item" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--border);">';
+          html += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+          html += '<div>';
+          html += '<div style="font-weight:500;font-size:var(--text-base);color:var(--text);">' + esc(c.name || c) + '</div>';
+          if (c.issuer || c.organization) {
+            html += '<div style="font-size:var(--text-sm);color:var(--text-secondary);">' + esc(c.issuer || c.organization) + '</div>';
+          }
+          html += '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

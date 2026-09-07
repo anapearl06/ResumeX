@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Shortlist &middot; Resumex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+  <style>
+    .cat-section{margin-bottom:32px}
+    .cat-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .sl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:all .25s}
+    .sl-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.06)}
+  </style>
+</head>
+<body>
+  <div class="layout">
+    {% include 'hr/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1>Shortlist</h1>
+            <p style="color:var(--text-muted);font-size:var(--text-sm);margin-top:4px">AI-powered candidate shortlisting for your open roles</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card animate-in">
+        <div class="card-header">
+          <div class="card-title">Select Job to Shortlist</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="input-group" style="flex:1;min-width:200px;margin-bottom:0">
+            <select class="input" id="jobSelect">
+              <option value="">Loading jobs...</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="runBtn" style="align-self:flex-end">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Run Shortlist
+          </button>
+        </div>
+      </div>
+
+      <div id="loading" style="display:none;text-align:center;padding:48px 0">
+        <div class="spinner"></div>
+        <div style="margin-top:16px;font-size:var(--text-base);color:var(--text-secondary)">AI is analyzing candidates and generating your shortlist...</div>
+      </div>
+
+      <div id="results" style="margin-top:32px"></div>
+
+      <div id="emptyJobs" class="empty" style="display:none;padding:48px 0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin:0 auto 12px;opacity:.25"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <h3>No jobs available</h3>
+        <p style="margin-bottom:12px">Create a job opening first, then come back to shortlist candidates</p>
+        <a href="/hr/jobs/create" class="btn btn-primary btn-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create Job
+        </a>
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/main.js"></script>
+  <script>
+    const jobSelect = document.getElementById('jobSelect');
+    const results = document.getElementById('results');
+    const loading = document.getElementById('loading');
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+      const jobId = jobSelect.value;
+      if (!jobId) { toast('Select a job first', 'error'); return; }
+
+      loading.style.display = 'block';
+      results.innerHTML = '';
+
+      try {
+        const res = await apiFetch('/api/hr/match', {
+          method: 'POST',
+          body: JSON.stringify({ job_id: parseInt(jobId) })
+        });
+        loading.style.display = 'none';
+        renderShortlist(res);
+      } catch (e) {
+        loading.style.display = 'none';
+        results.innerHTML = `
+          <div class="empty" style="padding:48px 0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin:0 auto 12px;opacity:.25"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h3>${esc(e.message)}</h3>
+          </div>`;
+      }
+    });
+
+    async function loadJobs() {
+      let jobs = [];
+      try {
+        jobs = await apiFetch('/api/hr/jobs');
+      } catch (e) {}
+
+      if (jobs.length === 0) {
+        jobSelect.innerHTML = '<option value="">No jobs available</option>';
+        jobSelect.disabled = true;
+        document.getElementById('emptyJobs').style.display = 'block';
+        return;
+      }
+
+      jobSelect.innerHTML = jobs.map(j =>
+        `<option value="${j.id}">${esc(j.title)} &mdash; ${esc(j.company)}</option>`
+      ).join('');
+    }
+
+    function renderShortlist(candidates) {
+      if (!Array.isArray(candidates) || candidates.length === 0) {
+        results.innerHTML = `
+          <div class="empty" style="padding:48px 0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin:0 auto 12px;opacity:.25"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <h3>No candidates to shortlist</h3>
+            <p>Upload some candidate resumes first, then run the shortlist again</p>
+          </div>`;
+        return;
+      }
+
+      const cats = [
+        { key: 'strong', label: 'Strong Matches', color: 'var(--green)', bg: 'rgba(22,163,74,.04)', borderColor: 'rgba(22,163,74,.15)' },
+        { key: 'potential', label: 'Potential Matches', color: 'var(--amber)', bg: 'rgba(217,119,6,.04)', borderColor: 'rgba(217,119,6,.15)' },
+        { key: 'weak', label: 'Weak Matches', color: 'var(--red)', bg: 'rgba(220,38,38,.04)', borderColor: 'rgba(220,38,38,.15)' }
+      ];
+
+      results.innerHTML = cats.map((cat, ci) => {
+        const list = candidates.filter(c => c.category === cat.key);
+        if (list.length === 0) return '';
+
+        return `
+          <div class="cat-section animate-in delay-${Math.min(ci + 1, 5)}">
+            <div class="cat-header">
+              <div class="cat-dot" style="background:${cat.color}"></div>
+              <h3 style="font-size:var(--text-lg);font-weight:600;color:var(--text)">${cat.label}</h3>
+              <span class="badge" style="background:${cat.color}15;color:${cat.color}">${list.length} candidate${list.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div class="grid grid-3">
+              ${list.map((c, i) => `
+                <div class="sl-card" style="background:${cat.bg};border-color:${cat.borderColor}">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);font-weight:700;color:#fff;flex-shrink:0">${esc((c.name || '?')[0])}</div>
+                      <strong style="font-size:var(--text-base);color:var(--text)">${esc(c.name)}</strong>
+                    </div>
+                    <span class="badge" style="background:${cat.color}15;color:${cat.color};font-size:var(--text-base);font-weight:700">${c.match}%</span>
+                  </div>
+                  <div style="font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;margin-bottom:12px">${esc(c.reason)}</div>
+                  ${(c.matching_skills || []).length > 0 ? `
+                    <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-bottom:6px">Matching</div>
+                    <div class="tags" style="margin-bottom:10px">
+                      ${(c.matching_skills || []).slice(0, 4).map(s => `<span class="tag tag-have">${esc(s)}</span>`).join('')}
+                    </div>
+                  ` : ''}
+                  ${(c.missing_skills || []).length > 0 ? `
+                    <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-bottom:6px">Missing</div>
+                    <div class="tags">
+                      ${(c.missing_skills || []).slice(0, 4).map(s => `<span class="tag tag-missing">${esc(s)}</span>`).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+      }).join('');
+
+      if (!results.innerHTML.trim()) {
+        results.innerHTML = `
+          <div class="empty" style="padding:48px 0">
+            <h3>No matches found</h3>
+            <p>Try uploading more candidates or adjusting job requirements</p>
+          </div>`;
+      }
+    }
+
+    loadJobs();
+  </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Candidates &middot; Resumex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+  <div class="layout">
+    {% include 'hr/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1>Candidates</h1>
+            <p style="color:var(--text-muted);font-size:var(--text-sm);margin-top:4px">Upload, search, and analyze candidate profiles</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="upload-zone animate-in" id="uploadZone">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h3>Upload candidate resumes or <span style="color:var(--primary);cursor:pointer">browse files</span></h3>
+        <p>PDF and DOCX supported, max 5MB</p>
+        <input type="file" id="candInput" accept=".pdf,.docx" style="display:none"/>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap" class="animate-in delay-1">
+        <div class="input-group" style="flex:1;min-width:200px;margin-bottom:0">
+          <input class="input" id="searchInput" placeholder="Search by name, skill, or email..."/>
+        </div>
+        <div class="input-group" style="flex:0 0 180px;margin-bottom:0">
+          <select class="input" id="expFilter">
+            <option value="">All Experience</option>
+            <option value="0">Freshers (0 yrs)</option>
+            <option value="2">2+ years</option>
+            <option value="5">5+ years</option>
+            <option value="8">8+ years</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="loading" style="display:none;text-align:center;padding:48px 0">
+        <div class="spinner"></div>
+        <div style="margin-top:12px;font-size:var(--text-sm);color:var(--text-muted)">Uploading and analyzing resume...</div>
+      </div>
+
+      <div id="grid" class="grid grid-3 animate-in delay-2" style="margin-top:24px"></div>
+
+      <div id="noResults" class="empty" style="display:none;padding:48px 0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin:0 auto 12px;opacity:.25"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <h3>No candidates match your search</h3>
+        <p>Try adjusting your filters or upload new resumes</p>
+      </div>
+
+      <div id="emptyState" class="empty" style="display:none;padding:48px 0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;margin:0 auto 12px;opacity:.25"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <h3>No candidates yet</h3>
+        <p>Upload your first candidate resume to get started</p>
+      </div>
+
+      <div class="modal-overlay" id="detailModal">
+        <div class="modal" style="max-width:680px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <h2 style="font-size:var(--text-xl);font-weight:600" id="dmName"></h2>
+            <button class="btn btn-ghost btn-sm" id="dmClose">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div id="dmContent"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/main.js"></script>
+  <script>
+    let candidates = [];
+
+    document.getElementById('uploadZone').addEventListener('click', () => {
+      document.getElementById('candInput').click();
+    });
+
+    document.getElementById('uploadZone').addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.currentTarget.style.borderColor = 'var(--primary)';
+      e.currentTarget.style.background = 'rgba(59,130,246,.04)';
+    });
+
+    document.getElementById('uploadZone').addEventListener('dragleave', (e) => {
+      e.currentTarget.style.borderColor = '';
+      e.currentTarget.style.background = '';
+    });
+
+    document.getElementById('uploadZone').addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.currentTarget.style.borderColor = '';
+      e.currentTarget.style.background = '';
+      const file = e.dataTransfer.files[0];
+      if (file) handleUpload(file);
+    });
+
+    document.getElementById('candInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleUpload(file);
+      e.target.value = '';
+    });
+
+    async function handleUpload(file) {
+      if (file.size > 5 * 1024 * 1024) { toast('File too large. Max 5MB allowed.', 'error'); return; }
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!['pdf', 'docx'].includes(ext)) { toast('Only PDF and DOCX files are supported', 'error'); return; }
+
+      document.getElementById('loading').style.display = 'block';
+      const fd = new FormData();
+      fd.append('resume', file);
+
+      try {
+        await apiFetch('/api/hr/upload-candidate', { method: 'POST', body: fd });
+        toast(file.name + ' uploaded successfully', 'success');
+        loadCandidates();
+      } catch (err) {
+        toast(err.message, 'error');
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', filterCandidates);
+    document.getElementById('expFilter').addEventListener('change', filterCandidates);
+
+    async function loadCandidates() {
+      try {
+        candidates = await apiFetch('/api/hr/candidates');
+      } catch (e) {
+        candidates = [];
+      }
+      filterCandidates();
+    }
+
+    function filterCandidates() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const exp = document.getElementById('expFilter').value;
+
+      const filtered = candidates.filter(c => {
+        const nameMatch = (c.name || '').toLowerCase().includes(q);
+        const emailMatch = (c.email || '').toLowerCase().includes(q);
+        const skillMatch = (c.skills || []).some(s => s.toLowerCase().includes(q));
+        const textMatch = nameMatch || emailMatch || skillMatch || !q;
+        const expMatch = !exp || (c.total_experience_years || 0) >= parseInt(exp);
+        return textMatch && expMatch;
+      });
+
+      const grid = document.getElementById('grid');
+      const noResults = document.getElementById('noResults');
+      const emptyState = document.getElementById('emptyState');
+
+      if (candidates.length === 0) {
+        grid.innerHTML = '';
+        grid.style.display = 'none';
+        noResults.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        grid.style.display = 'none';
+        noResults.style.display = 'block';
+        return;
+      }
+
+      noResults.style.display = 'none';
+      grid.style.display = '';
+      grid.innerHTML = filtered.map(c => `
+        <div class="card" style="cursor:pointer;transition:all .2s" onclick="showDetail(${c.id})">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:var(--text-lg);font-weight:700;color:#fff;flex-shrink:0">${esc((c.name || '?')[0])}</div>
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:var(--text-base);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.email || '')}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:var(--text-sm);color:var(--text-secondary)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px;flex-shrink:0"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            ${c.total_experience_years || 0} years experience
+          </div>
+          <div class="tags" style="margin-bottom:14px">
+            ${(c.skills || []).slice(0, 4).map(s => `<span class="tag">${esc(s)}</span>`).join('')}
+            ${(c.skills || []).length > 4 ? `<span class="tag" style="background:var(--border);color:var(--text-muted)">+${(c.skills || []).length - 4}</span>` : ''}
+          </div>
+          <button class="btn btn-sm" style="width:100%">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            View Profile
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function showDetail(id) {
+      const c = candidates.find(x => x.id === id);
+      if (!c) return;
+
+      document.getElementById('dmName').textContent = c.name || 'Unknown';
+      document.getElementById('dmContent').innerHTML = `
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <div style="width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:var(--text-xl);font-weight:700;color:#fff;flex-shrink:0">${esc((c.name || '?')[0])}</div>
+          <div>
+            <div style="font-size:var(--text-lg);font-weight:600">${esc(c.name)}</div>
+            <div style="font-size:var(--text-sm);color:var(--text-muted);margin-top:2px">${esc(c.email || '')} &middot; ${esc(c.phone || '')} &middot; ${c.total_experience_years || 0} yrs</div>
+          </div>
+        </div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-bottom:8px">Skills</div>
+        <div class="tags" style="margin-bottom:20px">${(c.skills || []).map(s => `<span class="tag">${esc(s)}</span>`).join('')}</div>
+        <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-bottom:8px">Experience</div>
+        <div class="timeline" style="margin-bottom:20px">${(c.experience || []).map(e => `
+          <div class="timeline-item">
+            <div style="font-weight:600;font-size:var(--text-base);color:var(--text)">${esc(e.role)}</div>
+            <div style="font-size:var(--text-sm);color:var(--text-muted);margin-top:2px">${esc(e.company)} &middot; ${esc(e.duration)}</div>
+            <div style="font-size:var(--text-sm);color:var(--text-secondary);margin-top:4px;line-height:1.6">${esc(e.description)}</div>
+          </div>
+        `).join('')}</div>
+        ${(c.projects || []).length > 0 ? `
+          <div style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;margin-bottom:8px">Projects</div>
+          ${(c.projects || []).map(p => `<div class="list-item">${esc(p)}</div>`).join('')}
+        ` : ''}
+      `;
+      document.getElementById('detailModal').classList.add('active');
+    }
+
+    document.getElementById('dmClose').addEventListener('click', () => {
+      document.getElementById('detailModal').classList.remove('active');
+    });
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+    });
+
+    loadCandidates();
+  </script>
+</body>
+</html>

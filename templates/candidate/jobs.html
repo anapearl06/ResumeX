@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Matcher - ResumeX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="layout">
+    {% include 'candidate/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1 class="animate-in">Job Matcher</h1>
+            <p class="text-secondary animate-in delay-1">AI-powered job recommendations</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="match-btn" class="btn btn-primary btn-sm animate-in delay-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Match
+          </button>
+        </div>
+      </div>
+
+      <div class="content">
+        <div id="loading" class="spinner"></div>
+
+        <div id="error-state" class="empty" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <p>No resume uploaded yet</p>
+          <a href="/candidate/upload" class="btn btn-primary" style="margin-top:var(--space-4);">Upload Resume</a>
+        </div>
+
+        <div id="jobs-list" style="display:none;"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    (function () {
+      var loading = document.getElementById('loading');
+      var errorState = document.getElementById('error-state');
+      var jobsList = document.getElementById('jobs-list');
+      var matchBtn = document.getElementById('match-btn');
+      var expandedJob = null;
+
+      matchBtn.addEventListener('click', function () {
+        loadJobs();
+      });
+
+      loadJobs();
+
+      async function loadJobs() {
+        loading.style.display = '';
+        errorState.style.display = 'none';
+        jobsList.style.display = 'none';
+        expandedJob = null;
+
+        try {
+          var jobs = await apiFetch('/api/job-match');
+          loading.style.display = 'none';
+
+          if (!jobs || !jobs.length) {
+            errorState.style.display = '';
+            return;
+          }
+
+          renderJobs(jobs);
+        } catch (e) {
+          loading.style.display = 'none';
+          if (e.message && e.message.toLowerCase().includes('resume')) {
+            errorState.style.display = '';
+          } else {
+            toast('Failed to load jobs: ' + (e.message || 'Unknown error'), 'error');
+            errorState.style.display = '';
+          }
+        }
+      }
+
+      function renderJobs(jobs) {
+        jobsList.style.display = '';
+        var html = '';
+
+        jobs.forEach(function (job, i) {
+          var score = job.match_score || 0;
+          var color = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : 'var(--red)';
+          var ringId = 'job-ring-' + i;
+          var skillsMatch = job.matching_skills || job.matched_skills || [];
+          var skillsMissing = job.missing_skills || [];
+
+          html += '<div class="card animate-in" style="margin-bottom:var(--space-4);cursor:pointer;" data-index="' + i + '">';
+          html += '<div class="card-header" style="align-items:center;" onclick="toggleJob(' + i + ')">';
+          html += '<div style="display:flex;align-items:center;gap:var(--space-4);flex:1;min-width:0;">';
+          html += '<div class="match-ring" id="' + ringId + '" style="width:56px;height:56px;flex-shrink:0;"></div>';
+          html += '<div style="flex:1;min-width:0;">';
+          html += '<div style="font-size:var(--text-lg);font-weight:600;color:var(--text);">' + esc(job.title || 'Untitled') + '</div>';
+          html += '<div style="font-size:var(--text-sm);color:var(--text-secondary);margin-top:2px;">' + esc(job.company || 'Unknown') + '</div>';
+          html += '</div>';
+          html += '<div style="text-align:right;flex-shrink:0;">';
+          html += '<span class="badge badge-' + (score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red') + '">' + score + '% match</span>';
+          html += '</div>';
+          html += '</div>';
+
+          if (job.reason || job.match_reason) {
+            html += '<p style="font-size:var(--text-sm);color:var(--text-secondary);margin-top:var(--space-3);line-height:1.5;">' + esc(job.reason || job.match_reason) + '</p>';
+          }
+
+          html += '<div style="display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-3);">';
+          skillsMatch.forEach(function (s) {
+            var name = typeof s === 'string' ? s : s.name || s;
+            html += '<span class="tag tag-have">' + esc(name) + '</span>';
+          });
+          skillsMissing.forEach(function (s) {
+            var name = typeof s === 'string' ? s : s.name || s;
+            html += '<span class="tag tag-missing">' + esc(name) + '</span>';
+          });
+          html += '</div>';
+
+          html += '<div id="job-detail-' + i + '" style="display:none;margin-top:var(--space-4);border-top:1px solid var(--border);padding-top:var(--space-4);"></div>';
+          html += '</div>';
+        });
+
+        jobsList.innerHTML = html;
+
+        jobs.forEach(function (job, i) {
+          var score = job.match_score || 0;
+          var color = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : 'var(--red)';
+          matchRing('job-ring-' + i, score, color);
+        });
+      }
+
+      window.toggleJob = async function (index) {
+        var detailEl = document.getElementById('job-detail-' + index);
+        if (!detailEl) return;
+
+        if (expandedJob === index) {
+          detailEl.style.display = 'none';
+          expandedJob = null;
+          return;
+        }
+
+        var prevDetail = document.getElementById('job-detail-' + expandedJob);
+        if (prevDetail) prevDetail.style.display = 'none';
+        expandedJob = index;
+
+        detailEl.style.display = '';
+        detailEl.innerHTML = '<div class="spinner" style="margin:var(--space-4) auto;"></div>';
+
+        try {
+          var detail = await apiFetch('/api/skill-gap');
+          renderJobDetail(detailEl, detail);
+        } catch (e) {
+          detailEl.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">Could not load details</p>';
+        }
+      };
+
+      function renderJobDetail(el, detail) {
+        var html = '<div class="grid grid-2">';
+
+        html += '<div>';
+        html += '<div style="font-weight:600;font-size:var(--text-base);color:var(--text);margin-bottom:var(--space-3);">Match Details</div>';
+        if (detail.recommendations && detail.recommendations.length) {
+          html += '<div style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-2);font-weight:500;">Recommendations</div>';
+          detail.recommendations.forEach(function (rec) {
+            html += '<div style="display:flex;align-items:flex-start;gap:var(--space-2);margin-bottom:var(--space-2);">';
+            html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+            html += '<span style="font-size:var(--text-sm);color:var(--text-secondary);">' + esc(typeof rec === 'string' ? rec : rec.text || rec) + '</span>';
+            html += '</div>';
+          });
+        }
+        html += '</div>';
+
+        html += '<div>';
+        var skillsHave = detail.matching_skills || detail.matched_skills || detail.skills_have || [];
+        var skillsNeed = detail.missing_skills || detail.skills_need || [];
+        if (skillsHave.length) {
+          html += '<div style="font-size:var(--text-sm);color:var(--green);font-weight:600;margin-bottom:var(--space-2);">Skills You Have</div>';
+          html += '<div class="tags" style="margin-bottom:var(--space-4);">';
+          skillsHave.forEach(function (s) {
+            var name = typeof s === 'string' ? s : s.name || s;
+            html += '<span class="tag tag-have">' + esc(name) + '</span>';
+          });
+          html += '</div>';
+        }
+        if (skillsNeed.length) {
+          html += '<div style="font-size:var(--text-sm);color:var(--red);font-weight:600;margin-bottom:var(--space-2);">Skills to Develop</div>';
+          html += '<div class="tags">';
+          skillsNeed.forEach(function (s) {
+            var name = typeof s === 'string' ? s : s.name || s;
+            html += '<span class="tag tag-missing">' + esc(name) + '</span>';
+          });
+          html += '</div>';
+        }
+        html += '</div>';
+
+        html += '</div>';
+        el.innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>

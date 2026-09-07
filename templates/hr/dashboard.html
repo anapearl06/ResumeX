@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard &middot; Resumex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+  <div class="layout">
+    {% include 'hr/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1>Dashboard</h1>
+            <p style="color:var(--text-muted);font-size:var(--text-sm);margin-top:4px">Overview of your recruiting pipeline</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <a href="/hr/jobs/create" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Job
+          </a>
+        </div>
+      </div>
+
+      <div class="grid grid-4 animate-in">
+        <div class="stat card">
+          <div class="stat-top">
+            <div class="stat-icon" style="background:rgba(59,130,246,.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="jobCount">0</div>
+          <div class="stat-label">Active Jobs</div>
+        </div>
+        <div class="stat card animate-in delay-1">
+          <div class="stat-top">
+            <div class="stat-icon" style="background:rgba(22,163,74,.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="candCount">0</div>
+          <div class="stat-label">Candidates</div>
+        </div>
+        <div class="stat card animate-in delay-2">
+          <div class="stat-top">
+            <div class="stat-icon" style="background:rgba(217,119,6,.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="strongCount">0</div>
+          <div class="stat-label">Strong Matches</div>
+        </div>
+        <div class="stat card animate-in delay-3">
+          <div class="stat-top">
+            <div class="stat-icon" style="background:rgba(139,92,246,.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.5"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="20" x2="12" y2="4"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="avgMatch">&mdash;</div>
+          <div class="stat-label">Avg Match</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2 animate-in delay-2" style="margin-top:24px;margin-bottom:24px">
+        <a href="/hr/jobs" class="card" style="text-decoration:none;cursor:pointer;transition:all .2s">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div class="stat-icon" style="background:rgba(59,130,246,.1);flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:var(--text-lg);color:var(--text)">Jobs</div>
+              <div style="font-size:var(--text-sm);color:var(--text-muted);margin-top:2px">Create and manage job openings</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:16px;height:16px;margin-left:auto"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        </a>
+        <a href="/hr/candidates" class="card" style="text-decoration:none;cursor:pointer;transition:all .2s">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div class="stat-icon" style="background:rgba(22,163,74,.1);flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:var(--text-lg);color:var(--text)">Candidates</div>
+              <div style="font-size:var(--text-sm);color:var(--text-muted);margin-top:2px">Upload resumes and browse profiles</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:16px;height:16px;margin-left:auto"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        </a>
+        <a href="/hr/shortlist" class="card" style="text-decoration:none;cursor:pointer;transition:all .2s">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div class="stat-icon" style="background:rgba(217,119,6,.1);flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:var(--text-lg);color:var(--text)">Shortlist</div>
+              <div style="font-size:var(--text-sm);color:var(--text-muted);margin-top:2px">AI-powered candidate shortlisting</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:16px;height:16px;margin-left:auto"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        </a>
+        <a href="/hr/compare" class="card" style="text-decoration:none;cursor:pointer;transition:all .2s">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div class="stat-icon" style="background:rgba(139,92,246,.1);flex-shrink:0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.5"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><line x1="12" y1="20" x2="12" y2="4"/></svg>
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:var(--text-lg);color:var(--text)">Compare</div>
+              <div style="font-size:var(--text-sm);color:var(--text-muted);margin-top:2px">Side-by-side candidate comparison</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="width:16px;height:16px;margin-left:auto"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+        </a>
+      </div>
+
+      <div class="grid grid-2 animate-in delay-3">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Jobs</div>
+            <a href="/hr/jobs" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          <div id="jobsList">
+            <div class="empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;margin:0 auto 12px;opacity:.3"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <h3>No jobs yet</h3>
+              <p>Create your first job opening</p>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Candidates</div>
+            <a href="/hr/candidates" class="btn btn-ghost btn-sm">View All</a>
+          </div>
+          <div id="candsList">
+            <div class="empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;margin:0 auto 12px;opacity:.3"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <h3>No candidates yet</h3>
+              <p>Upload candidate resumes to get started</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="/static/js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const [jobs, cands] = await Promise.all([
+          apiFetch('/api/hr/jobs'),
+          apiFetch('/api/hr/candidates')
+        ]);
+
+        document.getElementById('jobCount').textContent = jobs.length;
+        document.getElementById('candCount').textContent = cands.length;
+
+        const totalMatches = cands.reduce((sum, c) => {
+          return sum + (c.matches || []).filter(m => m.category === 'strong').length;
+        }, 0);
+        document.getElementById('strongCount').textContent = totalMatches;
+
+        const matchScores = cands.flatMap(c => (c.matches || []).map(m => m.match || 0)).filter(s => s > 0);
+        if (matchScores.length > 0) {
+          const avg = Math.round(matchScores.reduce((a, b) => a + b, 0) / matchScores.length);
+          document.getElementById('avgMatch').textContent = avg + '%';
+        }
+
+        if (jobs.length > 0) {
+          document.getElementById('jobsList').innerHTML = jobs.slice(0, 5).map(j => `
+            <div class="list-item" style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:600;font-size:var(--text-base);color:var(--text)">${esc(j.title)}</div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${esc(j.company)}</div>
+              </div>
+              <span class="badge badge-blue">${esc(j.experience_required || 0)} yrs</span>
+            </div>
+          `).join('');
+        }
+
+        if (cands.length > 0) {
+          document.getElementById('candsList').innerHTML = cands.slice(0, 5).map(c => `
+            <div class="list-item" style="display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:var(--text-xs);font-weight:700;color:#fff;flex-shrink:0">${esc((c.name || '?')[0])}</div>
+                <div>
+                  <div style="font-weight:600;font-size:var(--text-base);color:var(--text)">${esc(c.name)}</div>
+                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${esc(c.email || '')}</div>
+                </div>
+              </div>
+              <span class="badge badge-green">${(c.skills || []).length} skills</span>
+            </div>
+          `).join('');
+        }
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>

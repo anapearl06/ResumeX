@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Jobs &middot; Resumex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/main.css"/>
+</head>
+<body>
+  <div class="layout">
+    {% include 'hr/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1>Jobs</h1>
+            <p style="color:var(--text-muted);font-size:var(--text-sm);margin-top:4px">Manage your job openings and match candidates</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <a href="/hr/jobs/create" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Job
+          </a>
+        </div>
+      </div>
+
+      <div class="modal-overlay" id="jobModal">
+        <div class="modal">
+          <h2 style="font-size:var(--text-xl);font-weight:600;margin-bottom:20px">Create Job Opening</h2>
+          <div class="input-group">
+            <label>Job Title</label>
+            <input class="input" id="f_title" placeholder="e.g. Frontend Developer"/>
+          </div>
+          <div class="input-group">
+            <label>Company Name</label>
+            <input class="input" id="f_company" placeholder="e.g. Google"/>
+          </div>
+          <div class="input-group">
+            <label>Job Description</label>
+            <textarea class="input" id="f_desc" rows="4" placeholder="Describe the role, responsibilities, and requirements..."></textarea>
+          </div>
+          <div class="input-group">
+            <label>Required Skills <span style="color:var(--text-muted);font-weight:400">(comma separated)</span></label>
+            <input class="input" id="f_req" placeholder="React, JavaScript, CSS"/>
+          </div>
+          <div class="input-group">
+            <label>Preferred Skills <span style="color:var(--text-muted);font-weight:400">(comma separated)</span></label>
+            <input class="input" id="f_pref" placeholder="TypeScript, Next.js"/>
+          </div>
+          <div class="grid grid-2">
+            <div class="input-group">
+              <label>Required Experience (years)</label>
+              <input class="input" type="number" id="f_exp" placeholder="2" min="0"/>
+            </div>
+            <div class="input-group">
+              <label>Education Requirement</label>
+              <input class="input" id="f_edu" placeholder="B.Tech / B.E."/>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+            <button class="btn" id="cancelModal">Cancel</button>
+            <button class="btn btn-primary" id="saveJobBtn">Save Job</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="tableCard" style="display:none;margin-top:24px">
+        <div class="card-header">
+          <div class="card-title">All Openings</div>
+          <button class="btn btn-sm btn-primary" id="matchSelectedBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            AI Match Candidates
+          </button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:40px"></th>
+                <th>Title</th>
+                <th>Company</th>
+                <th>Experience</th>
+                <th>Education</th>
+                <th>Skills</th>
+              </tr>
+            </thead>
+            <tbody id="jobsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="emptyState" class="empty" style="padding:80px 0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;margin:0 auto 16px;opacity:.25"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <h3>No job openings yet</h3>
+        <p style="margin-bottom:16px">Create your first job to start matching candidates</p>
+        <button class="btn btn-primary" onclick="document.getElementById('jobModal').classList.add('active')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create Job
+        </button>
+      </div>
+
+      <div id="matchResults" style="margin-top:24px"></div>
+    </main>
+  </div>
+  <script src="/static/js/main.js"></script>
+  <script>
+    let jobs = [];
+    let selectedJob = null;
+
+    document.getElementById('cancelModal').addEventListener('click', () => {
+      document.getElementById('jobModal').classList.remove('active');
+    });
+
+    document.getElementById('jobModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+    });
+
+    document.getElementById('saveJobBtn').addEventListener('click', async () => {
+      const title = document.getElementById('f_title').value.trim();
+      const company = document.getElementById('f_company').value.trim();
+      const description = document.getElementById('f_desc').value.trim();
+      const required_skills = document.getElementById('f_req').value.split(',').map(s => s.trim()).filter(Boolean);
+      const preferred_skills = document.getElementById('f_pref').value.split(',').map(s => s.trim()).filter(Boolean);
+      const experience_required = parseInt(document.getElementById('f_exp').value) || 0;
+      const education = document.getElementById('f_edu').value.trim();
+
+      if (!title) { toast('Job title is required', 'error'); return; }
+      if (!company) { toast('Company name is required', 'error'); return; }
+
+      const btn = document.getElementById('saveJobBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        await apiFetch('/api/hr/job', {
+          method: 'POST',
+          body: JSON.stringify({ title, company, description, required_skills, preferred_skills, experience_required, education })
+        });
+        document.getElementById('jobModal').classList.remove('active');
+        ['f_title', 'f_company', 'f_desc', 'f_req', 'f_pref', 'f_exp', 'f_edu'].forEach(id => document.getElementById(id).value = '');
+        toast('Job created successfully', 'success');
+        loadJobs();
+      } catch (e) {
+        toast(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Job';
+      }
+    });
+
+    document.getElementById('matchSelectedBtn').addEventListener('click', async () => {
+      if (!selectedJob) { toast('Select a job first by clicking a row', 'error'); return; }
+      const results = document.getElementById('matchResults');
+      results.innerHTML = `
+        <div class="card">
+          <div style="text-align:center;padding:48px">
+            <div class="spinner"></div>
+            <div style="margin-top:16px;font-size:var(--text-base);color:var(--text-secondary)">AI is matching candidates to &ldquo;${esc(selectedJob.title)}&rdquo;...</div>
+          </div>
+        </div>`;
+
+      try {
+        const res = await apiFetch('/api/hr/match', { method: 'POST', body: JSON.stringify({ job_id: selectedJob.id }) });
+        renderMatches(res);
+      } catch (e) {
+        results.innerHTML = `<div class="card"><div class="empty"><h3>${esc(e.message)}</h3></div></div>`;
+      }
+    });
+
+    function renderMatches(res) {
+      const results = document.getElementById('matchResults');
+      if (!Array.isArray(res) || res.length === 0) {
+        results.innerHTML = '<div class="card"><div class="empty"><h3>No candidates found to match</h3><p>Upload candidates first, then try matching</p></div></div>';
+        return;
+      }
+
+      results.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">AI Candidate Ranking for &ldquo;${esc(selectedJob.title)}&rdquo;</div>
+            <span class="badge badge-default">${res.length} candidates</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${res.map((c, i) => {
+              const catBadge = c.category === 'strong' ? 'badge-green' : c.category === 'potential' ? 'badge-amber' : 'badge-red';
+              const catLabel = c.category === 'strong' ? 'Strong Match' : c.category === 'potential' ? 'Potential' : 'Weak';
+              return `
+                <div class="list-item" style="display:flex;align-items:center;gap:16px;padding:16px">
+                  <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-muted);width:28px;text-align:center;flex-shrink:0">${i + 1}</div>
+                  <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:var(--text-sm);font-weight:700;color:#fff;flex-shrink:0">${esc((c.name || '?')[0])}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                      <strong style="font-size:var(--text-base);color:var(--text)">${esc(c.name)}</strong>
+                      <span class="badge ${catBadge}">${catLabel}</span>
+                    </div>
+                    <div style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:6px">${esc(c.reason)}</div>
+                    <div class="tags">
+                      ${(c.matching_skills || []).slice(0, 5).map(s => `<span class="tag tag-have">${esc(s)}</span>`).join('')}
+                      ${(c.missing_skills || []).slice(0, 3).map(s => `<span class="tag tag-missing">${esc(s)}</span>`).join('')}
+                    </div>
+                  </div>
+                  <div style="text-align:center;flex-shrink:0;min-width:60px">
+                    <div style="font-size:var(--text-2xl);font-weight:700;color:var(--text)">${c.match}%</div>
+                    <div style="font-size:var(--text-xs);color:var(--text-muted)">match</div>
+                  </div>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }
+
+    function selectJob(id, row) {
+      document.querySelectorAll('#jobsBody tr').forEach(r => r.style.background = '');
+      row.style.background = 'rgba(59,130,246,.04)';
+      selectedJob = jobs.find(j => j.id === id);
+    }
+
+    async function loadJobs() {
+      try {
+        jobs = await apiFetch('/api/hr/jobs');
+      } catch (e) {
+        jobs = [];
+      }
+
+      if (jobs.length === 0) {
+        document.getElementById('tableCard').style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('tableCard').style.display = 'block';
+      document.getElementById('jobsBody').innerHTML = jobs.map((j, i) => `
+        <tr style="cursor:pointer" onclick="selectJob(${j.id}, this)" ${i === 0 ? 'style="background:rgba(59,130,246,.04)"' : ''}>
+          <td><input type="radio" name="jobsel" ${i === 0 ? 'checked' : ''}/></td>
+          <td style="font-weight:600;color:var(--text)">${esc(j.title)}</td>
+          <td style="color:var(--text-secondary)">${esc(j.company)}</td>
+          <td><span class="badge badge-blue">${j.experience_required || 0} yrs</span></td>
+          <td style="color:var(--text-secondary)">${esc(j.education) || '&mdash;'}</td>
+          <td><span class="badge badge-violet">${(j.required_skills || []).length} skills</span></td>
+        </tr>
+      `).join('');
+      selectedJob = jobs[0];
+    }
+
+    loadJobs();
+  </script>
+</body>
+</html>

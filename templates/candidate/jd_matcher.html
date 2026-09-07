@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JD Matcher - ResumeX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="layout">
+    {% include 'candidate/sidebar.html' with context %}
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-header">
+            <h1 class="animate-in">JD Matcher</h1>
+            <p class="text-secondary animate-in delay-1">Match your resume against a job description</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="card animate-in delay-1" style="margin-bottom:var(--space-6);">
+          <div class="card-header">
+            <div class="card-title">Paste Job Description</div>
+          </div>
+          <textarea
+            id="jd-input"
+            class="input"
+            rows="8"
+            placeholder="Paste the full job description here..."
+            style="width:100%;resize:vertical;font-family:inherit;font-size:var(--text-sm);line-height:1.6;"
+          ></textarea>
+          <button id="match-btn" class="btn btn-primary" style="margin-top:var(--space-4);width:100%;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Match
+          </button>
+        </div>
+
+        <div id="loading" class="spinner" style="display:none;"></div>
+
+        <div id="error-state" class="empty" style="display:none;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p>No resume uploaded yet</p>
+          <a href="/candidate/upload" class="btn btn-primary" style="margin-top:var(--space-4);">Upload Resume</a>
+        </div>
+
+        <div id="results" style="display:none;">
+          <div class="grid grid-2">
+            <div class="card animate-in">
+              <div class="card-header">
+                <div class="card-title">Match Overview</div>
+              </div>
+
+              <div style="text-align:center;padding:var(--space-4) 0;">
+                <div class="match-ring" id="jd-ring" style="width:120px;height:120px;margin:0 auto var(--space-4);"></div>
+                <div id="jd-score" style="font-size:var(--text-2xl);font-weight:700;color:var(--text);"></div>
+                <div style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-4);">Match Score</div>
+                <div id="jd-verdict"></div>
+              </div>
+
+              <div id="jd-stats" style="margin-top:var(--space-4);"></div>
+
+              <div id="jd-strengths" style="margin-top:var(--space-5);"></div>
+              <div id="jd-weaknesses" style="margin-top:var(--space-4);"></div>
+            </div>
+
+            <div class="card animate-in delay-1">
+              <div class="card-header">
+                <div class="card-title">Detailed Breakdown</div>
+              </div>
+
+              <div id="jd-matching-skills" style="margin-bottom:var(--space-5);">
+                <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span style="font-size:var(--text-sm);font-weight:600;color:var(--green);">Matching Skills</span>
+                </div>
+                <div id="jd-matching-list" class="tags"></div>
+              </div>
+
+              <div id="jd-missing-skills" style="margin-bottom:var(--space-5);">
+                <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span style="font-size:var(--text-sm);font-weight:600;color:var(--red);">Missing Skills</span>
+                </div>
+                <div id="jd-missing-list" class="tags"></div>
+              </div>
+
+              <div id="jd-keywords" style="margin-bottom:var(--space-5);">
+                <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+                  <span style="font-size:var(--text-sm);font-weight:600;color:var(--blue);">Keywords</span>
+                </div>
+                <div id="jd-keywords-list" class="tags"></div>
+              </div>
+
+              <div id="jd-recommendations"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    (function () {
+      var jdInput = document.getElementById('jd-input');
+      var matchBtn = document.getElementById('match-btn');
+      var loading = document.getElementById('loading');
+      var errorState = document.getElementById('error-state');
+      var results = document.getElementById('results');
+
+      matchBtn.addEventListener('click', function () {
+        match();
+      });
+
+      function match() {
+        var jd = jdInput.value.trim();
+        if (!jd) {
+          toast('Please paste a job description', 'error');
+          return;
+        }
+        runMatch(jd);
+      }
+
+      async function runMatch(jd) {
+        loading.style.display = '';
+        errorState.style.display = 'none';
+        results.style.display = 'none';
+
+        try {
+          var data = await apiFetch('/api/jd-match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_description: jd })
+          });
+          loading.style.display = 'none';
+
+          if (!data) {
+            errorState.style.display = '';
+            return;
+          }
+
+          results.style.display = '';
+          renderOverview(data);
+          renderMatchingSkills(data.matching_skills || data.matched_skills || []);
+          renderMissingSkills(data.missing_skills || []);
+          renderKeywords(data.keywords || []);
+          renderRecommendations(data.recommendations || []);
+          renderStats(data);
+          renderStrengthsWeaknesses(data);
+        } catch (e) {
+          loading.style.display = 'none';
+          if (e.message && e.message.toLowerCase().includes('resume')) {
+            errorState.style.display = '';
+          } else {
+            toast('Failed to match: ' + (e.message || 'Unknown error'), 'error');
+            errorState.style.display = '';
+          }
+        }
+      }
+
+      function renderOverview(data) {
+        var score = data.match_score || data.score || 0;
+        var color = score >= 80 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : 'var(--red)';
+        matchRing('jd-ring', score, color);
+        document.getElementById('jd-score').textContent = score + '%';
+
+        var verdictEl = document.getElementById('jd-verdict');
+        var verdict = '';
+        var boxColor = '';
+        if (score >= 80) {
+          verdict = 'Ready to Apply';
+          boxColor = 'var(--green)';
+        } else if (score >= 60) {
+          verdict = 'Close Match';
+          boxColor = 'var(--amber)';
+        } else {
+          verdict = 'Skill Gap Exists';
+          boxColor = 'var(--red)';
+        }
+
+        var verdictText = data.verdict || verdict;
+        verdictEl.innerHTML = '<div style="padding:var(--space-3) var(--space-4);background:color-mix(in srgb,' + boxColor + ' 10%,transparent);border:1px solid color-mix(in srgb,' + boxColor + ' 30%,transparent);border-radius:var(--radius-md);text-align:center;">' +
+          '<span style="font-size:var(--text-base);font-weight:600;color:' + boxColor + ';">' + esc(verdictText) + '</span>' +
+          '</div>';
+      }
+
+      function renderStats(data) {
+        var el = document.getElementById('jd-stats');
+        var stats = [
+          { label: 'Experience Level', value: data.experience_level || data.experience || '--' },
+          { label: 'Education Match', value: data.education_match || data.education || '--' },
+          { label: 'Keyword Coverage', value: data.keyword_coverage || data.keywords_matched || '--' }
+        ];
+        var html = '<div style="display:flex;flex-direction:column;gap:var(--space-3);">';
+        stats.forEach(function (s) {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-2) var(--space-3);background:var(--surface);border-radius:var(--radius-sm);">';
+          html += '<span style="font-size:var(--text-sm);color:var(--text-secondary);">' + esc(s.label) + '</span>';
+          html += '<span style="font-size:var(--text-sm);font-weight:600;color:var(--text);">' + esc(String(s.value)) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+        el.innerHTML = html;
+      }
+
+      function renderStrengthsWeaknesses(data) {
+        var strengthsEl = document.getElementById('jd-strengths');
+        var weaknessesEl = document.getElementById('jd-weaknesses');
+        var strengths = data.strengths || [];
+        var weaknesses = data.weaknesses || data.gaps || [];
+
+        if (strengths.length) {
+          var html = '<div style="font-size:var(--text-sm);font-weight:600;color:var(--green);margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-2);">';
+          html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          html += 'Strengths</div>';
+          strengths.forEach(function (s) {
+            var text = typeof s === 'string' ? s : s.text || s;
+            html += '<div style="font-size:var(--text-sm);color:var(--text-secondary);padding:var(--space-1) 0;line-height:1.5;">' + esc(text) + '</div>';
+          });
+          strengthsEl.innerHTML = html;
+        }
+
+        if (weaknesses.length) {
+          var html2 = '<div style="font-size:var(--text-sm);font-weight:600;color:var(--red);margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-2);">';
+          html2 += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+          html2 += 'Weaknesses</div>';
+          weaknesses.forEach(function (w) {
+            var text2 = typeof w === 'string' ? w : w.text || w;
+            html2 += '<div style="font-size:var(--text-sm);color:var(--text-secondary);padding:var(--space-1) 0;line-height:1.5;">' + esc(text2) + '</div>';
+          });
+          weaknessesEl.innerHTML = html2;
+        }
+      }
+
+      function renderMatchingSkills(skills) {
+        var el = document.getElementById('jd-matching-list');
+        if (!skills.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">None found</p>';
+          return;
+        }
+        var html = '';
+        skills.forEach(function (s) {
+          var name = typeof s === 'string' ? s : s.name || s;
+          html += '<span class="tag tag-have">' + esc(name) + '</span>';
+        });
+        el.innerHTML = html;
+      }
+
+      function renderMissingSkills(skills) {
+        var el = document.getElementById('jd-missing-list');
+        if (!skills.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">No missing skills</p>';
+          return;
+        }
+        var html = '';
+        skills.forEach(function (s) {
+          var name = typeof s === 'string' ? s : s.name || s;
+          html += '<span class="tag tag-missing">' + esc(name) + '</span>';
+        });
+        el.innerHTML = html;
+      }
+
+      function renderKeywords(keywords) {
+        var el = document.getElementById('jd-keywords-list');
+        if (!keywords.length) {
+          el.innerHTML = '<p style="color:var(--text-muted);font-size:var(--text-sm);">None found</p>';
+          return;
+        }
+        var html = '';
+        keywords.forEach(function (k) {
+          var name = typeof k === 'string' ? k : k.text || k.keyword || k;
+          var found = typeof k === 'object' ? (k.found || k.matched || false) : false;
+          html += '<span class="tag ' + (found ? 'tag-have' : 'tag-missing') + '">' + esc(name) + '</span>';
+        });
+        el.innerHTML = html;
+      }
+
+      function renderRecommendations(recs) {
+        var el = document.getElementById('jd-recommendations');
+        if (!recs.length) {
+          el.innerHTML = '';
+          return;
+        }
+        var html = '<div style="font-size:var(--text-sm);font-weight:600;color:var(--text);margin-bottom:var(--space-3);display:flex;align-items:center;gap:var(--space-2);">';
+        html += '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+        html += 'Recommendations</div>';
+        recs.forEach(function (rec) {
+          var text = typeof rec === 'string' ? rec : rec.text || rec;
+          html += '<div style="display:flex;align-items:flex-start;gap:var(--space-2);margin-bottom:var(--space-2);padding:var(--space-2) var(--space-3);background:color-mix(in srgb,var(--primary) 5%,transparent);border-radius:var(--radius-sm);">';
+          html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+          html += '<span style="font-size:var(--text-sm);color:var(--text-secondary);line-height:1.5;">' + esc(text) + '</span>';
+          html += '</div>';
+        });
+        el.innerHTML = html;
+      }
+    })();
+  </script>
+</body>
+</html>
