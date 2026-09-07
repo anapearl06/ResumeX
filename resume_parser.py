@@ -8,7 +8,7 @@ from groq import Groq
 from pydantic import BaseModel
 
 
-# Environment # 
+# Environment #
 
 load_dotenv()
 
@@ -84,7 +84,7 @@ def read_resume(filepath: str) -> str:
     )
 
 
-# Resume Parser # 
+# Resume Parser #
 
 def parse_resume(resume_text: str) -> Resume:
     """
@@ -150,9 +150,9 @@ Return ONLY valid JSON.
 
     except Exception as e:
         raise ValueError(f"Failed to parse resume.\n\n{e}") from e
-    
 
-# Testing # 
+
+# Testing #
 
 # TESTING SETUP
 #
