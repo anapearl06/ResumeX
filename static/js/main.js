@@ -55,3 +55,32 @@ function matchRing(id, score, color) {
     });
   });
 }
+
+// ===== MOBILE SIDEBAR TOGGLE =====
+(function initMobileNav() {
+  if (!document.querySelector('.sidebar')) return;
+  const btn = document.createElement('button');
+  btn.className = 'mobile-nav-toggle';
+  btn.setAttribute('aria-label', 'Toggle navigation');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+  document.body.appendChild(btn);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-overlay';
+  document.body.appendChild(overlay);
+
+  function open() {
+    document.querySelector('.sidebar').classList.add('open');
+    overlay.classList.add('active');
+    btn.classList.add('active');
+  }
+  function close() {
+    document.querySelector('.sidebar').classList.remove('open');
+    overlay.classList.remove('active');
+    btn.classList.remove('active');
+  }
+  btn.addEventListener('click', function() {
+    document.querySelector('.sidebar').classList.contains('open') ? close() : open();
+  });
+  overlay.addEventListener('click', close);
+})();
