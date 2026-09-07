@@ -1,9 +1,24 @@
 function toast(message, type = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + type;
-  el.textContent = message;
+  el.setAttribute('role', 'status');
+
+  const icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  };
+
+  el.innerHTML = icons[type] || icons.default;
+  el.appendChild(document.createTextNode(' '));
+  el.appendChild(document.createTextNode(message));
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(8px)';
+    setTimeout(() => el.remove(), 200);
+  }, 2800);
 }
 
 async function apiFetch(url, options = {}) {
@@ -11,7 +26,7 @@ async function apiFetch(url, options = {}) {
     headers: options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
     ...options,
   });
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Something went wrong');
   return data;
 }
