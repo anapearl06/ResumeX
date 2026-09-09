@@ -187,7 +187,7 @@ img{display:block;max-width:100%}
   transition:all .25s cubic-bezier(.4,0,.2,1);
   position:relative;
 }
-.card:hover{border-color:#D0CEC8;box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.card:hover{border-color:#D0CEC8;box-shadow:0 6px 16px rgba(0,0,0,.06);transform:translateY(-2px)}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .card-title{font-size:var(--text-sm);font-weight:600;color:var(--text)}
 
