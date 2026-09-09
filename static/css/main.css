@@ -275,7 +275,7 @@ select.input{
 /* ===== BADGES ===== */
 .badge{
   display:inline-flex;align-items:center;gap:4px;
-  padding:2px 8px;border-radius:999px;
+  padding:3px 10px;border-radius:999px;
   font-size:10px;font-weight:600;letter-spacing:.01em;
 }
 .badge-default{background:var(--bg-subtle);color:var(--text-secondary);border:1px solid var(--border)}
