@@ -344,7 +344,7 @@ tr:hover td{background:var(--bg-subtle)}
 
 /* ===== PROGRESS ===== */
 .progress-bar{height:6px;background:var(--bg-subtle);border-radius:999px;overflow:hidden}
-.progress-fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,var(--primary),#7C3AED)}
+.progress-fill{height:100%;border-radius:999px;transition:width .6s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,var(--primary),#6D28D9)}
 
 /* ===== MATCH RING ===== */
 .match-ring{position:relative;width:72px;height:72px}
