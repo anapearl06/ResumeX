@@ -244,7 +244,7 @@ img{display:block;max-width:100%}
   background:var(--primary);color:var(--text-inverse);
   border-color:var(--primary);box-shadow:0 1px 3px rgba(79,70,229,.2);
 }
-.btn-primary:hover{background:var(--primary-hover);box-shadow:0 4px 12px rgba(79,70,229,.25);transform:translateY(-1px)}
+.btn-primary:hover{background:var(--primary-hover);box-shadow:0 6px 16px rgba(79,70,229,.28);transform:translateY(-1px)}
 .btn-primary:active{background:var(--primary-active);transform:translateY(0);box-shadow:0 1px 3px rgba(79,70,229,.2)}
 .btn-sm{padding:5px 10px;font-size:var(--text-xs);border-radius:var(--radius-sm)}
 .btn-lg{padding:9px 18px;font-size:var(--text-base)}
