@@ -469,7 +469,7 @@ tr:hover td{background:var(--bg-subtle)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ===== SCROLLBAR ===== */
-::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px}
-::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:999px;transition:background .2s}
+::-webkit-scrollbar-thumb:hover{background:#B9B4AC}
