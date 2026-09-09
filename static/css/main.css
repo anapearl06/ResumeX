@@ -220,12 +220,12 @@ img{display:block;max-width:100%}
 .stat-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .stat-label{font-size:var(--text-xs);font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
 .stat-icon{
-  width:32px;height:32px;border-radius:var(--radius);
+  width:34px;height:34px;border-radius:var(--radius);
   display:flex;align-items:center;justify-content:center;
-  transition:all .2s ease;
+  transition:all .25s ease;
 }
-.stat-icon svg{width:16px;height:16px}
-.stat-value{font-size:var(--text-2xl);font-weight:700;color:var(--text);letter-spacing:-.03em;line-height:1}
+.stat-icon svg{width:17px;height:17px}
+.stat-value{font-size:var(--text-2xl);font-weight:700;color:var(--text);letter-spacing:-.03em;line-height:1.15}
 
 /* ===== BUTTONS ===== */
 .btn{
